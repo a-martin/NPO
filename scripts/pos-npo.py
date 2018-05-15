@@ -372,7 +372,7 @@ duoPos = [
      (300, 0),  # right
 ]
 
-sujetRaw = '002'
+sujetRaw = '001'
 boothCode = 1
 sujet = 'ENG{}{}'.format(boothCode, sujetRaw)
 
