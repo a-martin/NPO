@@ -57,8 +57,9 @@ def makeRedDot():
 
     dot = visual.Circle(
         win,
-        radius=10,
-        color='red'
+        radius=30,
+        fillColor='red',
+        pos=(0,200)
     )
 
     return dot
@@ -79,7 +80,6 @@ def doNounExposureTrial(noun):
     win.flip() # display image
     core.wait(0.500) # wait 500 ms
     playStim(npoAudio) # play label
-    # event.waitKeys() # wait for participant key press
     mouse.setVisible(True) # activate mouse
 
     clicked = False
@@ -198,30 +198,45 @@ def doNounTest():
         
     return
 
-def doNounProdTrial(noun):
+def doNounProdTrial(noun, trialNo):
 
     # Prepare objects
     npo = vocab['nouns'][noun] # fetch npo from eng
+    recordFile = '../recordings/{}-noun-{}-{}.wav'.format(sujet, noun, trialNo)
     npoAudio = sound.Sound(cheminAudio+npo+'.wav') # prepare sound obj
     
     npoImage = visual.ImageStim( # prepare image obj
         win,
         image=cheminImages+noun+'.png'
     )
-    npoImage.draw()
-
-    # Do trial
-    win.flip() # display image
+    npoImage.setAutoDraw(True)
     dot = makeRedDot()
     
 
+    # Do trial
+    win.flip() # display image
+    core.wait(1.000)
 
+    dot.draw()
+    win.flip()
+    mic.record(sec=5, filename=recordFile)
+    core.wait(5)
+    win.flip() # erase dot
 
+    core.wait(0.500)
+    playStim(npoAudio)
+    core.wait(0.500)
+    npoImage.setAutoDraw(False)
+    win.flip() # erase image
     
     return
 
 def doNounProd():
+    nouns = vocab['nouns'].keys() * 3
+    random.shuffle(nouns)
 
+    for n,noun in enumerate(nouns):
+        doNounProdTrial(noun, n)
     return
 
 
@@ -373,12 +388,11 @@ def doModTestTrial(mod, noun):
     return mod, noun, modType, npoMod, response, correct
 
 
-def doModTest():
+def doModTest(repetitions=6):
      global modTestDf
-     repetitions = 6
      i = vocab[inner].keys()
      o = vocab[outer].keys()
-     eng = i * 6 + o * 6
+     eng = i * repetitions + o * repetitions
      random.shuffle(eng)
      for trialNo,mod in enumerate(eng):
           noun = random.choice(vocab['nouns'].keys())
@@ -398,7 +412,106 @@ def doModTest():
           modTestDf = modTestDf.append(trial)
           
      return
+
+def makeBottomNouns():
+    nouns = vocab['nouns'].keys()
+    nouns.sort()
+
+    nounImages = []
+    for n,noun in enumerate(nouns):
+        image = visual.ImageStim(
+            win,
+            image=cheminImages+noun+'.png',
+            pos=nounPos[n],
+            name=noun,
+            size=(100,100)
+        )
+        image.setAutoDraw(True)
+        nounImages.append(image)
+
+    return nounImages
+
     
+def doModProdTrial(mod, noun, trialNo):
+
+    # Prepare objects
+    modType = 'inner' if mod in vocab[inner].keys() else 'outer'
+    modCats = inner if modType=='inner' else outer
+    npoMod = vocab[modCats][mod]
+    npoNoun = vocab['nouns'][noun]
+    recordFile = '../recordings/{}-1mod-{}_{}-{}.wav'.format(sujet, mod, noun, trialNo)
+    
+    npoAudio = [
+        sound.Sound(cheminAudio+npoNoun+'.wav'),
+        sound.Sound(cheminAudio+npoMod+'.wav'),
+    ]
+
+    npoImage = visual.ImageStim( # prepare image obj
+        win,
+        image=cheminImages+mod+'-'+noun+'.png'
+    )
+    npoImage.setAutoDraw(True)
+
+    # Prepare noun images along bottom
+    greyNouns = makeBottomNouns()
+    print greyNouns
+        
+    
+    dot = makeRedDot()
+    dot.setFillColor('lightgrey')
+    
+    # Do trial
+    win.flip() # display main image and greyNouns
+    core.wait(1.000)
+
+    mouse.setVisible(True)
+    dot.setAutoDraw(True)
+    win.flip()
+
+    clicked = False
+    while not clicked:
+        for greyNoun in greyNouns:
+            if mouse.isPressedIn(greyNoun):
+                nounAudio = sound.Sound(cheminAudio+vocab['nouns'][greyNoun.name]+'.wav')
+                playStim(nounAudio)
+        if mouse.isPressedIn(dot):
+            dot.setFillColor('red')
+            win.flip()
+            clicked = True
+            
+    mic.record(sec=5, filename=recordFile)
+    core.wait(5)
+    dot.setFillColor('grey')
+    win.flip() # turn dot grey
+
+    core.wait(0.500)
+    for stim in npoAudio: playStim(stim)
+    core.wait(0.500)
+    npoImage.setAutoDraw(False)
+    win.flip() # erase image
+
+
+    return
+
+
+def doModProd():
+    repetitions = 1
+       
+    innerEng = vocab[inner].keys() * repetitions
+    outerEng = vocab[outer].keys() * repetitions
+    engL = innerEng + outerEng
+    random.shuffle(engL)
+    mods = []
+    mods += engL
+    nouns = vocab['nouns'].keys()
+    
+    for n,mod in enumerate(mods):
+        noun = random.choice(nouns)
+        doModProdTrial(mod, noun, n)
+
+
+    return
+     
 ############################
 ## GLOBAL FIXED VARIABLES ##
 
@@ -415,6 +528,13 @@ quadPos = [
 duoPos = [
      (-300, 0), # left
      (300, 0),  # right
+]
+
+nounPos = [
+    (-450,-250),
+    (-150,-250),
+    (150,-250),
+    (450,-250)
 ]
 
 sujetRaw = '001'
@@ -455,16 +575,55 @@ If you do not agree to all of these, please inform the experimenter now.
 
 If you agree, press the spacebar.'''
 
-nounExpoConsigne = u'''You will now hear nouns in the language.  Click on the picture after you hear its name.
+intro = u'''Today, you will learn a small part of a language called Nápíjò. Nápíjò is spoken by around 10,000 people in a rural region of Southeast Asia and has some properties that interest our research team. We are particularly interested in how native English speakers fair when learning Nápíjò words. You will be instructed through a series of short learning and testing tasks.
+
+When you’re ready, press the spacebar, and you will be instructed on the first part of the experiment.
 '''
 
-nounTestConsigne = u'''You will now be tested on your retention of nouns in the language.
+nounExpoConsigne = u'''For this first part of the experiment, you will see pictures of objects, and you will hear a native speaker of Nápíjò say the name of the objects. Simply repeat after the speaker and try to remember as best you can. Once you’ve repeated the name, click on the object, and another object will appear. Objects will repeat, so you’ll have plenty of chances to learn the words!
+
+Press the spacebar when you’re ready to begin.
 '''
 
-modExpoConsigne = u'''You will now hear nouns with modifiers in the language.  Click on the picture after you hear its description.
+nounTestConsigne = u'''Now comes your first test. You will hear the speaker say the name of an object, and then you will see all four objects appear on the screen. Your job is to click on the correct object. If you make a mistake, the speaker will say the label again, to help you remember.
+
+Press the spacebar when you’re ready to continue.
 '''
 
-modTestConsigne = u'''Mod test.'''
+nounProdConsigne = u'''Well done. You will now see pictures of objects, and it will be your turn to say their name in Nápíjò. On each trial, you will see the image. Then a red dot will appear above the image. That means the microphone is recording, and you can go ahead and say the name of the object. If you don’t remember the name, simply say so. When the red dot disappears, the microphone is no longer recording. You will then hear the native speaker say the name of the object again, as a wee reminder.
+
+Press the spacebar when you’re ready to continue.
+'''
+
+modExpoConsigne = u'''Alright, now that you have learned the names of these objects well, we’ll teach you a couple of ways to describe the objects. Just like in the first part of the experiment, you’ll see a picture and hear the speaker describe it. Simply repeat after the speaker and try to remember the new words you hear. Once you’ve repeated after the speaker, click on the image.
+
+Press the spacebar when you’re ready to continue.
+'''
+
+modTestConsigne = u'''Now comes your second test. You will hear the speaker describe objects, and then you will see two possible images. Your job is to click on the image that corresponds to what the speaker says. If you make a mistake, the speaker will repeat the description, to help you remember.
+
+Press the spacebar when you’re ready to continue.
+'''
+
+modProdConsigne = u'''Well done. You will now see images, and again it will be your turn to describe them in Nápíjò. On each trial, you will see the image. Then a red dot will appear above the image. That means the microphone is recording, and you can go ahead and give the description in Nápíjò. If you don’t remember some of the words, simply say so. When the red dot disappears, the microphone is no longer recording. You will then hear the native speaker describe the image, as a wee reminder.
+
+Press the spacebar when you’re ready to continue.
+'''
+
+twoModProdConsigne = u'''Nicely done. Now comes the hard part! Again, you will need to describe images in Nápíjò, but this time the images will be a little more complex, and you’ll need to combine words in ways you’ve not heard from the native speaker. Just do your best. After a few of these trials, you’ll do a quick round of comprehension again to refresh your memory before a final round of image description.
+
+Press the spacebar when you’re ready to continue.
+'''
+
+modTestConsigneBis = u'''Phew, you made it through that. Now once more you’ll hear the native speaker and you’ll have to click on the image that corresponds to their description. If you make a mistake, the speaker will repeat the description.
+
+Press the spacebar when you’re ready to continue.
+'''
+
+twoModProdConsigneBis = u'''You have one final task! Again, you’ll see images that you need to describe using all the words of Nápíjò that you’ve learned. Speak only when the red dot appears on the screen, indicating that the microphone is on.
+
+Press the spacebar when you’re ready to continue.
+'''
 
 merci = u'''Thank you for your participation!'''
 
@@ -550,7 +709,7 @@ mouse = event.Mouse(visible=False)
 
 # MAKE MICROPHONE
 microphone.switchOn(sampleRate=44100)
-mic = microphone.AdvAudioCaputre(stereo=False)
+mic = microphone.AdvAudioCapture(stereo=False)
 
 
 # RUN EXPERIMENT
@@ -558,23 +717,46 @@ mic = microphone.AdvAudioCaputre(stereo=False)
 # Display welcome
 instructies(welcome)
 
+# Display introduction
+instructies(intro)
+
 # Noun exposure
-instructies(nounExpoConsigne)
-doNounExposure()
+# instructies(nounExpoConsigne)
+# doNounExposure()
 
 # Noun test
-instructies(nounTestConsigne)
-doNounTest()
-nounTestDf.to_csv(nounTestFileName, index=None)
+# instructies(nounTestConsigne)
+# doNounTest()
+# nounTestDf.to_csv(nounTestFileName, index=None)
+
+# Noun prod
+# instructies(nounProdConsigne)
+# doNounProd()
 
 # Mod exposure
-instructies(modExpoConsigne)
-doModExposure()
+# instructies(modExpoConsigne)
+# doModExposure()
 
 # Mod test
-instructies(modTestConsigne)
-doModTest()
-modTestDf.to_csv(modTestFileName, index=None)
+# instructies(modTestConsigne)
+# doModTest()
+# modTestDf.to_csv(modTestFileName, index=None)
+
+# Mod prod
+instructies(modProdConsigne)
+doModProd()
+
+# 2-mod prod
+# instructies(twoModProdConsigne)
+# doTwoModProd()
+
+# Mod prod bis
+# instructies(modTestConsigneBis)
+# doModTest(repetitions=3)
+
+# 2-mod prod bis
+# instructies(twoModProdConsigneBis)
+# doTwoModProd()
 
 # Thank you
 instructies(merci)
