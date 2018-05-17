@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
 
-from psychopy import core, gui, misc, data, visual, event, sound
+from psychopy import core, gui, misc, data, visual, event, sound, microphone, prefs
 import pandas as pd
 import numpy as np
 import codecs # for utf-8 file handling
 import random
+
+prefs.general['audioLib'] = ['pyo']
 
 ##########################
 ## FUNCTION DEFINITIONS ##
@@ -51,6 +53,15 @@ def drawBigSquare(pos, colour):
     
     return square
 
+def makeRedDot():
+
+    dot = visual.Circle(
+        win,
+        radius=10,
+        color='red'
+    )
+
+    return dot
     
 def doNounExposureTrial(noun):
 
@@ -167,10 +178,10 @@ def doNounTestTrial(noun):
     
 def doNounTest():
     global nounTestDf
-    repetitions = 6
+    repetitions = 3 # 12 noun comprehension trials
     eng = vocab['nouns'].keys() * repetitions
     random.shuffle(eng) # NOT BLOCKED
-    print eng
+    # print eng
     for trialNo,noun in enumerate(eng):
         noun, correctNpo, response, correct = doNounTestTrial(noun)
 
@@ -187,6 +198,34 @@ def doNounTest():
         
     return
 
+def doNounProdTrial(noun):
+
+    # Prepare objects
+    npo = vocab['nouns'][noun] # fetch npo from eng
+    npoAudio = sound.Sound(cheminAudio+npo+'.wav') # prepare sound obj
+    
+    npoImage = visual.ImageStim( # prepare image obj
+        win,
+        image=cheminImages+noun+'.png'
+    )
+    npoImage.draw()
+
+    # Do trial
+    win.flip() # display image
+    dot = makeRedDot()
+    
+
+
+
+    
+    return
+
+def doNounProd():
+
+    return
+
+
+    
 def doModExposureTrial(mod, noun):
 
     # Prepare objects
@@ -266,6 +305,7 @@ def doModTestTrial(mod, noun):
 
     modOther = otherMods[mod]
     allPhrases = [mod+'-'+noun, modOther+'-'+noun]
+    random.shuffle(allPhrases)
     
     images = [visual.ImageStim(win, image=cheminImages+phrase+'.png', pos=duoPos[n], name=phrase) for n,phrase in enumerate(allPhrases)]
 
@@ -315,8 +355,13 @@ def doModTestTrial(mod, noun):
 
         win.flip()
 
-    core.wait(1.000)
-    
+    if correct==0:
+        playStim(sound.Sound(cheminAudio+'wrong-short.wav'))
+        core.wait(0.100)
+        for audio in npoAudio: playStim(audio)
+    else:
+        playStim(sound.Sound(cheminAudio+'correct-short.wav'))
+    core.wait(1.000)    
 
     for image in images: image.setAutoDraw(False)
     for square in squares: square.setAutoDraw(False)
@@ -503,6 +548,10 @@ win.flip()
 # MAKE MOUSE
 mouse = event.Mouse(visible=False)
 
+# MAKE MICROPHONE
+microphone.switchOn(sampleRate=44100)
+mic = microphone.AdvAudioCaputre(stereo=False)
+
 
 # RUN EXPERIMENT
 
@@ -510,17 +559,17 @@ mouse = event.Mouse(visible=False)
 instructies(welcome)
 
 # Noun exposure
-# instructies(nounExpoConsigne)
-# doNounExposure()
+instructies(nounExpoConsigne)
+doNounExposure()
 
 # Noun test
-# instructies(nounTestConsigne)
-# doNounTest()
-# nounTestDf.to_csv(nounTestFileName, index=None)
+instructies(nounTestConsigne)
+doNounTest()
+nounTestDf.to_csv(nounTestFileName, index=None)
 
 # Mod exposure
-# instructies(modExpoConsigne)
-# doModExposure()
+instructies(modExpoConsigne)
+doModExposure()
 
 # Mod test
 instructies(modTestConsigne)
