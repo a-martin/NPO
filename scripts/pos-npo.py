@@ -15,7 +15,7 @@ prefs.general['audioLib'] = ['pyo']
 def instructies(x):
     'Display instructions on screen and wait for participant to press button'
     win.flip()
-    visual.TextStim(win, text=x, color="black", wrapWidth=800).draw()
+    visual.TextStim(win, text=x, color="black", wrapWidth=1.5).draw()
     win.flip()
     event.waitKeys()
     win.flip()
@@ -61,6 +61,14 @@ def makeRedDot():
         fillColor='red',
         pos=(0,200)
     )
+
+    # dot = visual.Rect(
+    #     win,
+    #     size=(75,75),
+    #     pos=(0,300),
+    #     fillColor='red'
+    # )
+
 
     return dot
     
@@ -454,9 +462,10 @@ def doModProdTrial(mod, noun, trialNo):
 
     # Prepare noun images along bottom
     greyNouns = makeBottomNouns()
-    print greyNouns
+    # print greyNouns
         
     
+    # dot = makeRedDot()
     dot = makeRedDot()
     dot.setFillColor('lightgrey')
     
@@ -470,15 +479,20 @@ def doModProdTrial(mod, noun, trialNo):
 
     clicked = False
     while not clicked:
-        for greyNoun in greyNouns:
-            if mouse.isPressedIn(greyNoun):
-                nounAudio = sound.Sound(cheminAudio+vocab['nouns'][greyNoun.name]+'.wav')
-                playStim(nounAudio)
+        if mouse.getPressed()[0] == 1:
+            print 'left button pressed'
         if mouse.isPressedIn(dot):
+            print 'mouse pressed in dot'
             dot.setFillColor('red')
             win.flip()
             clicked = True
-            
+        if mouse.isPressedIn(npoImage):
+            print 'mouse pressed in central image'
+        for n,greyNoun in enumerate(greyNouns):
+            if mouse.isPressedIn(greyNoun):
+                print 'mouse pressed in {}'.format(n)
+
+                
     mic.record(sec=5, filename=recordFile)
     core.wait(5)
     dot.setFillColor('grey')
@@ -693,16 +707,19 @@ if plein_ecran:
         allowGUI=False,
         color="white",
         colorSpace="rgb",
-        units="pix"
+        units="norm",
+        screen=1
     )
 else:
     win = visual.Window(
         [1200,800],
-        color="white",
+        color="grey",
         colorSpace="rgb",
-        units="pix"
+        units="norm",
+        screen=2,
     )
 win.flip()
+
 
 # MAKE MOUSE
 mouse = event.Mouse(visible=False)
