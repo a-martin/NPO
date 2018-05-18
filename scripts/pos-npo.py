@@ -15,7 +15,7 @@ prefs.general['audioLib'] = ['pyo']
 def instructies(x):
     'Display instructions on screen and wait for participant to press button'
     win.flip()
-    visual.TextStim(win, text=x, color="black", wrapWidth=1.5).draw()
+    visual.TextStim(win, text=x, color="black", wrapWidth=1.25, height=0.04).draw()
     win.flip()
     event.waitKeys()
     win.flip()
@@ -57,9 +57,9 @@ def makeRedDot():
 
     dot = visual.Circle(
         win,
-        radius=30,
+        radius=0.025,
         fillColor='red',
-        pos=(0,200)
+        pos=(0,0.7)
     )
 
     # dot = visual.Rect(
@@ -432,8 +432,11 @@ def makeBottomNouns():
             image=cheminImages+noun+'.png',
             pos=nounPos[n],
             name=noun,
-            size=(100,100)
+            # size=(0.15,0.15)
+            # height=0.15
         )
+        image.units = 'pix'
+        image.size = (100, 100)
         image.setAutoDraw(True)
         nounImages.append(image)
 
@@ -545,10 +548,10 @@ duoPos = [
 ]
 
 nounPos = [
-    (-450,-250),
-    (-150,-250),
-    (150,-250),
-    (450,-250)
+    (-0.75,-0.75),
+    (-0.25,-0.75),
+    (0.25,-0.75),
+    (0.75,-0.75)
 ]
 
 sujetRaw = '001'
@@ -708,7 +711,6 @@ if plein_ecran:
         color="white",
         colorSpace="rgb",
         units="norm",
-        screen=1
     )
 else:
     win = visual.Window(
@@ -716,7 +718,7 @@ else:
         color="grey",
         colorSpace="rgb",
         units="norm",
-        screen=2,
+        screen=2
     )
 win.flip()
 
